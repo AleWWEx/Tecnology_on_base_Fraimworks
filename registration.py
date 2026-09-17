@@ -1,5 +1,5 @@
 import random
-import daletime
+import datetime
 
 event_name = "Дебаты: Искусственный интеллект и этика"
 min_age_limit = 16
