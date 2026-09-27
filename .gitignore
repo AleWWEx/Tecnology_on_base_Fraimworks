@@ -1,0 +1,36 @@
+# Виртуальные окружения
+.venv/
+venv/
+env/
+ENV/
+
+# Байт-код Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Отчёты и кэш тестов
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Переменные окружения и секреты
+.env
+.env.*
+
+# IDE и редакторы
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Методические материалы преподавателя (в репозиторий не входят)
+*.doc
+*.docx
+
+# Операционная система
+.DS_Store
+Thumbs.db
+desktop.ini
