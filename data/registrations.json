@@ -1,0 +1,502 @@
+[
+  {
+    "id": 1,
+    "event_id": 1,
+    "name": "Мария К.",
+    "age": 16,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1037"
+  },
+  {
+    "id": 2,
+    "event_id": 1,
+    "name": "Иван П.",
+    "age": 17,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1074"
+  },
+  {
+    "id": 3,
+    "event_id": 1,
+    "name": "Анна С.",
+    "age": 18,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1111"
+  },
+  {
+    "id": 4,
+    "event_id": 1,
+    "name": "Дмитрий Л.",
+    "age": 19,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1148"
+  },
+  {
+    "id": 5,
+    "event_id": 1,
+    "name": "Елена В.",
+    "age": 20,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1185"
+  },
+  {
+    "id": 6,
+    "event_id": 1,
+    "name": "Сергей Т.",
+    "age": 21,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1222"
+  },
+  {
+    "id": 7,
+    "event_id": 1,
+    "name": "Ольга Н.",
+    "age": 22,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1259"
+  },
+  {
+    "id": 8,
+    "event_id": 1,
+    "name": "Павел Ж.",
+    "age": 23,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1296"
+  },
+  {
+    "id": 9,
+    "event_id": 1,
+    "name": "Наталья Р.",
+    "age": 24,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1333"
+  },
+  {
+    "id": 10,
+    "event_id": 1,
+    "name": "Андрей Д.",
+    "age": 16,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1370"
+  },
+  {
+    "id": 11,
+    "event_id": 1,
+    "name": "Ирина М.",
+    "age": 17,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1407"
+  },
+  {
+    "id": 12,
+    "event_id": 1,
+    "name": "Светлана Б.",
+    "age": 18,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1444"
+  },
+  {
+    "id": 13,
+    "event_id": 1,
+    "name": "Евгений Г.",
+    "age": 19,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1481"
+  },
+  {
+    "id": 14,
+    "event_id": 1,
+    "name": "Оксана Ф.",
+    "age": 20,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1518"
+  },
+  {
+    "id": 15,
+    "event_id": 1,
+    "name": "Павел У.",
+    "age": 21,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1555"
+  },
+  {
+    "id": 16,
+    "event_id": 1,
+    "name": "Юлия Х.",
+    "age": 22,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1592"
+  },
+  {
+    "id": 17,
+    "event_id": 1,
+    "name": "Аркадий Ц.",
+    "age": 23,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1629"
+  },
+  {
+    "id": 18,
+    "event_id": 1,
+    "name": "Вера Щ.",
+    "age": 24,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1666"
+  },
+  {
+    "id": 19,
+    "event_id": 1,
+    "name": "Тимур Э.",
+    "age": 16,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1703"
+  },
+  {
+    "id": 20,
+    "event_id": 1,
+    "name": "Людмила Ю.",
+    "age": 17,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1740"
+  },
+  {
+    "id": 21,
+    "event_id": 1,
+    "name": "Марк Я.",
+    "age": 18,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1777"
+  },
+  {
+    "id": 22,
+    "event_id": 1,
+    "name": "Ксения А.",
+    "age": 19,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1814"
+  },
+  {
+    "id": 23,
+    "event_id": 1,
+    "name": "Роман Б.",
+    "age": 20,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-1851"
+  },
+  {
+    "id": 24,
+    "event_id": 2,
+    "name": "Алина Г.",
+    "age": 17,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-1888"
+  },
+  {
+    "id": 25,
+    "event_id": 2,
+    "name": "Борис Е.",
+    "age": 18,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-1925"
+  },
+  {
+    "id": 26,
+    "event_id": 2,
+    "name": "Владислав К.",
+    "age": 19,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-1962"
+  },
+  {
+    "id": 27,
+    "event_id": 2,
+    "name": "Дарья Л.",
+    "age": 20,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-1999"
+  },
+  {
+    "id": 28,
+    "event_id": 2,
+    "name": "Дарья Ш.",
+    "age": 20,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "отменён",
+    "ticket_code": "DC-2036"
+  },
+  {
+    "id": 29,
+    "event_id": 2,
+    "name": "Егор М.",
+    "age": 22,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-2073"
+  },
+  {
+    "id": 30,
+    "event_id": 3,
+    "name": "Алина Г.",
+    "age": 17,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2110"
+  },
+  {
+    "id": 31,
+    "event_id": 3,
+    "name": "Борис Е.",
+    "age": 18,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2147"
+  },
+  {
+    "id": 32,
+    "event_id": 3,
+    "name": "Владислав К.",
+    "age": 19,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2184"
+  },
+  {
+    "id": 33,
+    "event_id": 3,
+    "name": "Дарья Л.",
+    "age": 20,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2221"
+  },
+  {
+    "id": 34,
+    "event_id": 3,
+    "name": "Егор М.",
+    "age": 21,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2258"
+  },
+  {
+    "id": 35,
+    "event_id": 3,
+    "name": "Зинаида Н.",
+    "age": 23,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-2295"
+  },
+  {
+    "id": 36,
+    "event_id": 3,
+    "name": "Артур П.",
+    "age": 24,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-2332"
+  },
+  {
+    "id": 37,
+    "event_id": 5,
+    "name": "Алина Г.",
+    "age": 15,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2369"
+  },
+  {
+    "id": 38,
+    "event_id": 5,
+    "name": "Борис Е.",
+    "age": 16,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2406"
+  },
+  {
+    "id": 39,
+    "event_id": 5,
+    "name": "Владислав К.",
+    "age": 17,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2443"
+  },
+  {
+    "id": 40,
+    "event_id": 5,
+    "name": "Дарья Л.",
+    "age": 18,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2480"
+  },
+  {
+    "id": 41,
+    "event_id": 5,
+    "name": "Егор М.",
+    "age": 19,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2517"
+  },
+  {
+    "id": 42,
+    "event_id": 5,
+    "name": "Зинаида Н.",
+    "age": 20,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2554"
+  },
+  {
+    "id": 43,
+    "event_id": 5,
+    "name": "Артур П.",
+    "age": 21,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2591"
+  },
+  {
+    "id": 44,
+    "event_id": 5,
+    "name": "Вероника С.",
+    "age": 22,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2628"
+  },
+  {
+    "id": 45,
+    "event_id": 5,
+    "name": "Глеб Т.",
+    "age": 23,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "присутствовал",
+    "ticket_code": "DC-2665"
+  },
+  {
+    "id": 46,
+    "event_id": 5,
+    "name": "Егор М.",
+    "age": 24,
+    "level": "начинающий",
+    "has_read_materials": true,
+    "status": "отменён",
+    "ticket_code": "DC-2702"
+  },
+  {
+    "id": 47,
+    "event_id": 6,
+    "name": "Вероника С.",
+    "age": 26,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-2739"
+  },
+  {
+    "id": 48,
+    "event_id": 6,
+    "name": "Глеб Т.",
+    "age": 27,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-2776"
+  },
+  {
+    "id": 49,
+    "event_id": 6,
+    "name": "Дарья Ш.",
+    "age": 28,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-2813"
+  },
+  {
+    "id": 50,
+    "event_id": 6,
+    "name": "Евгения Ф.",
+    "age": 29,
+    "level": "продвинутый",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-2850"
+  }
+]

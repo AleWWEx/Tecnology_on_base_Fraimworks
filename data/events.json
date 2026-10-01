@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "club_id": 1,
+    "topic_id": 1,
+    "event_date": "2026-10-15",
+    "start_time": "18:30",
+    "format": "онлайн",
+    "place": "ссылка на комнату присылается после подтверждения",
+    "capacity": 25,
+    "min_age": 16,
+    "required_level": "средний"
+  },
+  {
+    "id": 2,
+    "club_id": 2,
+    "topic_id": 3,
+    "event_date": "2026-10-17",
+    "start_time": "16:00",
+    "format": "офлайн",
+    "place": " читальный зал, корпус 2",
+    "capacity": 12,
+    "min_age": 14,
+    "required_level": "продвинутый"
+  },
+  {
+    "id": 3,
+    "club_id": 3,
+    "topic_id": 2,
+    "event_date": "2026-10-20",
+    "start_time": "15:00",
+    "format": "офлайн",
+    "place": "аудитория 301",
+    "capacity": 40,
+    "min_age": 16,
+    "required_level": "начинающий"
+  },
+  {
+    "id": 4,
+    "club_id": 1,
+    "topic_id": 4,
+    "event_date": "2026-11-05",
+    "start_time": "18:30",
+    "format": "онлайн",
+    "place": "ссылка на комнату присылается после подтверждения",
+    "capacity": 30,
+    "min_age": 16,
+    "required_level": "средний"
+  },
+  {
+    "id": 5,
+    "club_id": 2,
+    "topic_id": 5,
+    "event_date": "2026-09-25",
+    "start_time": "17:00",
+    "format": "офлайн",
+    "place": "читальный зал, корпус 2",
+    "capacity": 15,
+    "min_age": 14,
+    "required_level": "начинающий"
+  },
+  {
+    "id": 6,
+    "club_id": 3,
+    "topic_id": 6,
+    "event_date": "2026-12-02",
+    "start_time": "14:00",
+    "format": "офлайн",
+    "place": "аудитория 305",
+    "capacity": 20,
+    "min_age": 18,
+    "required_level": "продвинутый"
+  }
+]
