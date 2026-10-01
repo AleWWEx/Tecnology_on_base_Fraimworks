@@ -6,84 +6,107 @@ from clubs import (
     get_club,
     get_club_card,
     iter_club_names,
-    sort_club_ids_by_name,
-    sort_club_ids_by_size,
+    normalize,
+    sort_clubs_by_name,
+    sort_clubs_by_size,
 )
+from models import Club
 
 
-def test_add_club_puts_club_into_dict():
-    clubs = {}
+def test_add_club_creates_object(clubs):
+    club = add_club(clubs, "Философский клуб", "Описание", "Модератор")
 
-    club_id = add_club(clubs, "Философский клуб", "Описание", "Модератор")
-
-    assert len(clubs) == 1
-    assert clubs[club_id]["name"] == "Философский клуб"
-    assert clubs[club_id]["moderator"] == "Модератор"
+    assert isinstance(club, Club)
+    assert club.id == 1
+    assert clubs == [club]
 
 
-def test_add_club_generates_increasing_ids(clubs):
-    first_id = add_club(clubs, "Первый", "Описание", "Модератор")
-    second_id = add_club(clubs, "Второй", "Описание", "Модератор")
+def test_add_club_appends_to_collection(clubs):
+    add_club(clubs, "Первый", "Описание", "Модератор")
 
-    assert first_id == 1
-    assert second_id == 2
+    add_club(clubs, "Второй", "Описание", "Модератор")
 
-
-def test_get_club_returns_data(club):
-    assert get_club(club, 1)["name"] == "Философский клуб"
+    assert [club.name for club in clubs] == ["Первый", "Второй"]
+    assert clubs[1].id == 2
 
 
-def test_get_club_returns_none_for_unknown_id(club):
-    assert get_club(club, 99) is None
+def test_get_club_returns_object(club):
+    assert get_club(club, 1).name == "Философский клуб"
 
 
-def test_find_club_ignores_case(clubs):
-    add_club(clubs, "Философский клуб", "Дебаты", "Модератор")
-
-    assert find_club(clubs, "ФИЛОСОФСКИЙ") == [1]
+def test_get_club_returns_none_when_missing(clubs):
+    assert get_club(clubs, 5) is None
 
 
-def test_find_club_searches_description(clubs):
-    add_club(clubs, "Клуб дебатов", "Британская система", "Модератор")
+def test_find_club_by_name(clubs):
+    add_club(clubs, "Философский клуб", "Дебаты", "Айриев")
+    add_club(clubs, "Книжный клуб", "Книги", "Смирнова")
 
-    assert find_club(clubs, "британская") == [1]
+    found = find_club(clubs, "книжный")
 
-
-def test_find_club_returns_empty_list(club):
-    assert find_club(club, "несуществующий") == []
-
-
-def test_iter_club_names_yields_sorted_names(clubs):
-    add_club(clubs, "Ярмарка", "Описание", "Модератор")
-    add_club(clubs, "Абвер", "Описание", "Модератор")
-
-    assert list(iter_club_names(clubs)) == ["Абвер", "Ярмарка"]
+    assert [item.name for item in found] == ["Книжный клуб"]
 
 
-def test_sort_club_ids_by_name(clubs):
-    add_club(clubs, "Ярмарка", "Описание", "Модератор")
-    add_club(clubs, "Абвер", "Описание", "Модератор")
+def test_find_club_by_description(clubs):
+    add_club(clubs, "Философский клуб", "Дебаты", "Айриев")
+    add_club(clubs, "Книжный клуб", "Книги", "Смирнова")
 
-    assert sort_club_ids_by_name(clubs) == [2, 1]
+    assert len(find_club(clubs, "дебаты")) == 1
 
 
-def test_sort_club_ids_by_size_descending(clubs):
+def test_find_club_without_result(clubs):
+    assert find_club(clubs, "нет такого клуба") == []
+
+
+def test_iter_club_names_is_generator(clubs):
+    add_club(clubs, "Янтарный клуб", "Описание", "Модератор")
+    add_club(clubs, "Алые паруса", "Описание", "Модератор")
+
+    names = iter_club_names(clubs)
+
+    assert list(names) == ["Алые паруса", "Янтарный клуб"]
+
+
+def test_sort_clubs_by_name(clubs):
+    add_club(clubs, "Янтарный клуб", "Описание", "Модератор")
+    add_club(clubs, "Алые паруса", "Описание", "Модератор")
+
+    assert [item.name for item in sort_clubs_by_name(clubs)] == [
+        "Алые паруса", "Янтарный клуб"
+    ]
+
+
+def test_sort_clubs_by_size_descending(clubs):
+    first = add_club(clubs, "Первый", "Описание", "Модератор")
+    second = add_club(clubs, "Второй", "Описание", "Модератор")
+
+    sizes = {first.id: 1, second.id: 5}
+
+    assert [item.name for item in sort_clubs_by_size(clubs, sizes)] == [
+        "Второй", "Первый"
+    ]
+
+
+def test_sort_clubs_by_size_without_counts(clubs):
     add_club(clubs, "Первый", "Описание", "Модератор")
     add_club(clubs, "Второй", "Описание", "Модератор")
 
-    sizes = {1: 1, 2: 5}
-
-    assert sort_club_ids_by_size(clubs, sizes) == [2, 1]
+    assert len(sort_clubs_by_size(clubs, {})) == 2
 
 
-def test_sort_club_ids_by_size_of_club_without_events(clubs):
-    add_club(clubs, "Первый", "Описание", "Модератор")
-
-    assert sort_club_ids_by_size(clubs, {}) == [1]
-
-
-def test_get_club_card_contains_data(club):
-    card = get_club_card(get_club(club, 1))
+def test_get_club_card_uses_object(club):
+    card = get_club_card(club[0])
 
     assert "Философский клуб" in card
     assert "Модератор" in card
+
+
+def test_normalize_strips_and_lowercases():
+    assert normalize("  ФИЛОСОФИЯ ") == "философия"
+
+
+def test_modules_use_objects_not_dictionaries():
+    club = add_club([], "Клуб", "Описание", "Модератор")
+
+    assert not isinstance(club, dict)
+    assert club.to_dict()["name"] == "Клуб"

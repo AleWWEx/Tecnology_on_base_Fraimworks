@@ -1,7 +1,6 @@
 """Тесты функций работы с темами дискуссий."""
 
-import pytest
-
+from models import Topic
 from topics import (
     LEVEL_ORDER,
     LEVELS,
@@ -14,74 +13,95 @@ from topics import (
 )
 
 
-def test_add_topic_puts_topic_into_dict():
-    topics = {}
+def test_add_topic_creates_object(topics):
+    topic = add_topic(topics, "Справедливость", "средний", ["этика"],
+                      "Материалы")
 
-    topic_id = add_topic(topics, "Тема", "средний", ["этика"], "Материалы")
-
-    assert len(topics) == 1
-    assert topics[topic_id]["title"] == "Тема"
-
-
-def test_add_topic_removes_duplicate_tags():
-    topics = {}
-
-    topic_id = add_topic(
-        topics, "Тема", "средний", ["этика", "Этика", "социология"],
-        "Материалы",
-    )
-
-    assert topics[topic_id]["tags"] == ["этика", "социология"]
+    assert isinstance(topic, Topic)
+    assert topic.id == 1
+    assert topics == [topic]
 
 
-def test_get_topic_returns_none_for_unknown_id(topics):
-    add_topic(topics, "Тема", "средний", ["этика"], "Материалы")
+def test_add_topic_cleans_tags(topics):
+    topic = add_topic(topics, "Тема", "средний", [" этика ", "ЭТИКА"],
+                      "Материалы")
 
+    assert list(topic.tags) == ["этика"]
+
+
+def test_add_topic_appends_to_collection(topics):
+    add_topic(topics, "Первая", "средний", [], "Материалы")
+
+    add_topic(topics, "Вторая", "средний", [], "Материалы")
+
+    assert [topic.id for topic in topics] == [1, 2]
+
+
+def test_get_topic_returns_object(topics):
+    add_topic(topics, "Тема", "средний", [], "Материалы")
+
+    assert get_topic(topics, 1).title == "Тема"
+
+
+def test_get_topic_returns_none_when_missing(topics):
     assert get_topic(topics, 7) is None
 
 
 def test_find_topics_by_tag_ignores_case(topics):
-    add_topic(topics, "Тема", "средний", ["Этика"], "Материалы")
+    add_topic(topics, "Первая", "средний", ["ИИ"], "Материалы")
+    add_topic(topics, "Вторая", "средний", ["логика"], "Материалы")
 
-    assert find_topics_by_tag(topics, "этика") == [1]
+    found = find_topics_by_tag(topics, "ии")
 
-
-def test_find_topics_by_tag_returns_empty_list(topic):
-    assert find_topics_by_tag(topic, "кино") == []
-
-
-def test_filter_topics_by_level_returns_generator(topic):
-    result = filter_topics_by_level(topic, "средний")
-
-    assert list(result) == [1]
+    assert [topic.title for topic in found] == ["Первая"]
 
 
-def test_filter_topics_by_level_skips_other_levels(topics):
-    add_topic(topics, "Первая", "начинающий", ["философия"], "Материалы")
-    add_topic(topics, "Вторая", "средний", ["этика"], "Материалы")
+def test_find_topics_by_tag_without_result(topics):
+    add_topic(topics, "Первая", "средний", ["ИИ"], "Материалы")
 
-    assert list(filter_topics_by_level(topics, "начинающий")) == [1]
-
-
-def test_sort_topics_by_level_orders_from_simple_to_hard(topics):
-    add_topic(topics, "Сложная", "продвинутый", ["этика"], "Материалы")
-    add_topic(topics, "Простая", "начинающий", ["философия"], "Материалы")
-    add_topic(topics, "Средняя", "средний", ["книги"], "Материалы")
-
-    assert sort_topics_by_level(topics) == [2, 3, 1]
+    assert find_topics_by_tag(topics, "этика") == []
 
 
-def test_level_order_matches_levels_tuple():
-    assert list(LEVEL_ORDER) == list(LEVELS)
+def test_filter_topics_by_level_is_generator(topics):
+    add_topic(topics, "Первая", "средний", [], "Материалы")
+    add_topic(topics, "Вторая", "средний", [], "Материалы")
+    add_topic(topics, "Третья", "начинающий", [], "Материалы")
+
+    found = filter_topics_by_level(topics, "средний")
+
+    assert len(list(found)) == 2
 
 
-def test_get_topic_card_contains_tags(topic):
-    card = get_topic_card(get_topic(topic, 1))
+def test_filter_topics_by_level_without_result(topics):
+    add_topic(topics, "Первая", "средний", [], "Материалы")
+
+    assert list(filter_topics_by_level(topics, "продвинутый")) == []
+
+
+def test_sort_topics_by_level(topics):
+    add_topic(topics, "Третья", "продвинутый", [], "Материалы")
+    add_topic(topics, "Первая", "начинающий", [], "Материалы")
+    add_topic(topics, "Вторая", "средний", [], "Материалы")
+
+    assert [topic.level for topic in sort_topics_by_level(topics)] == [
+        "начинающий", "средний", "продвинутый"
+    ]
+
+
+def test_levels_constant_and_order():
+    assert LEVELS == ("начинающий", "средний", "продвинутый")
+    assert LEVEL_ORDER["средний"] == 1
+
+
+def test_get_topic_card_uses_object(topic):
+    card = get_topic_card(topic[0])
 
     assert "Тема дискуссии" in card
     assert "этика" in card
 
 
-@pytest.mark.parametrize("level", LEVELS)
-def test_level_is_known(level):
-    assert level in LEVEL_ORDER
+def test_modules_use_objects_not_dictionaries(topics):
+    added = add_topic(topics, "Тема", "средний", [], "Материалы")
+
+    assert not isinstance(added, dict)
+    assert added.to_dict()["title"] == "Тема"

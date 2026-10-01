@@ -13,6 +13,7 @@ import analytics
 import clubs
 import events
 import main
+import models
 import registrations
 import storage
 import topics
@@ -41,11 +42,13 @@ from main import (
     run_menu,
     run_mode,
     show_clubs,
+    show_objects,
     show_registrations,
     show_statistics,
     show_topics,
     show_upcoming_events,
 )
+from models import Club, Event, Registration, Topic
 from registrations import create_registration
 from topics import add_topic
 
@@ -53,35 +56,39 @@ TODAY = datetime.date(2026, 10, 1)
 
 
 def make_project(clubs_data, topics_data, events_data, registrations_data):
-    """Заполнить коллекции данными для проверки меню."""
+    """Заполнить коллекции объектами для проверки меню."""
     add_club(clubs_data, "Философский клуб", "Описание клуба", "Модератор")
     add_topic(topics_data, "Справедливость", "средний", ["этика"],
               "Материалы")
-    add_event(
-        events_data, 1, 1, datetime.date(2026, 10, 15), "18:30", "онлайн",
-        "ссылка на комнату", 25, 16, "средний",
-    )
-    add_event(
-        events_data, 1, 1, datetime.date(2026, 9, 1), "18:30", "офлайн",
-        "Зал клуба", 10, 16, "средний",
-    )
+    added = [
+        add_event(
+            events_data, 1, 1, datetime.date(2026, 10, 15), "18:30",
+            "онлайн", "ссылка на комнату", 25, 16, "средний",
+        ),
+        add_event(
+            events_data, 1, 1, datetime.date(2026, 9, 1), "18:30", "офлайн",
+            "Зал клуба", 10, 16, "средний",
+        ),
+    ]
+    for event in added:
+        event.link(club=clubs_data[0], topic=topics_data[0])
     return events_data
 
 
-def make_event_record():
-    """Вернуть данные мероприятия для проверки обработки заявки."""
-    return {
-        "id": DEMO_EVENT_ID,
-        "club_id": 1,
-        "topic_id": 1,
-        "event_date": datetime.date(2026, 10, 15),
-        "start_time": "18:30",
-        "format": "онлайн",
-        "place": "ссылка на комнату",
-        "capacity": 25,
-        "min_age": 16,
-        "required_level": "средний",
-    }
+def make_event_record(capacity=25):
+    """Вернуть объект мероприятия для проверки обработки заявки."""
+    return Event(
+        event_id=DEMO_EVENT_ID,
+        club_id=1,
+        topic_id=1,
+        event_date=datetime.date(2026, 10, 15),
+        start_time="18:30",
+        event_format="онлайн",
+        place="ссылка на комнату",
+        capacity=capacity,
+        min_age=16,
+        required_level="средний",
+    )
 
 
 def test_process_application_approves_and_saves(registrations):
@@ -92,8 +99,27 @@ def test_process_application_approves_and_saves(registrations):
 
     assert result == RESULT_APPROVED
     assert len(registrations) == 1
-    assert registrations[0]["status"] == STATUS_CONFIRMED
-    assert registrations[0]["name"] == "Мария К."
+    assert registrations[0].status == STATUS_CONFIRMED
+    assert registrations[0].name == "Мария К."
+
+
+def test_process_application_creates_object(registrations):
+    process_application(
+        registrations, make_event_record(), "Мария К.", "19", "средний",
+        "да", TODAY,
+    )
+
+    assert isinstance(registrations[0], Registration)
+
+
+def test_process_application_links_event(registrations):
+    event = make_event_record()
+
+    process_application(
+        registrations, event, "Мария К.", "19", "средний", "да", TODAY,
+    )
+
+    assert registrations[0].event is event
 
 
 def test_process_application_prints_ticket_code(registrations, capsys):
@@ -109,8 +135,7 @@ def test_process_application_prints_ticket_code(registrations, capsys):
 
 
 def test_process_application_waiting_list(registrations):
-    event = make_event_record()
-    event["capacity"] = 1
+    event = make_event_record(capacity=1)
     create_registration(
         registrations, DEMO_EVENT_ID, "Другой", 19, "средний", True,
         STATUS_CONFIRMED,
@@ -122,7 +147,7 @@ def test_process_application_waiting_list(registrations):
 
     assert result == RESULT_WAITING
     assert len(registrations) == 2
-    assert registrations[-1]["status"] == STATUS_PENDING
+    assert registrations[-1].status == STATUS_PENDING
 
 
 def test_process_application_rejects_without_saving(registrations):
@@ -150,7 +175,7 @@ def test_process_application_rejects_invalid_age(registrations, capsys):
 
 def test_process_application_rejects_finished_event(registrations):
     event = make_event_record()
-    event["event_date"] = datetime.date(2026, 9, 1)
+    event.event_date = datetime.date(2026, 9, 1)
 
     result = process_application(
         registrations, event, "Мария К.", "19", "средний", "да", TODAY,
@@ -171,25 +196,23 @@ def test_print_event_card_contains_data(club, topic, event, registrations,
 
 
 def test_print_event_card_reports_missing_event(capsys):
-    print_event_card(999, {}, {}, {}, [], TODAY)
+    print_event_card(999, [], [], [], [], TODAY)
 
     assert "не найдено" in capsys.readouterr().out
 
 
 def test_show_functions_do_not_fail_with_empty_data(capsys):
-    show_clubs({}, {})
-    show_topics({})
-    show_registrations([], {})
-    show_statistics({}, {}, [], {})
+    show_clubs([], [])
+    show_topics([])
+    show_registrations([])
+    show_statistics([], [], [], [])
     output = capsys.readouterr().out
 
     assert "Регистраций пока нет." in output
 
 
-def test_show_upcoming_events_lists_planned(club, topic, event, registrations,
-                                            capsys):
-    event[1]["event_date"] = datetime.date(2026, 10, 15)
-
+def test_show_upcoming_events_lists_planned(club, topic, event,
+                                            registrations, capsys):
     show_upcoming_events(event, club, topic, registrations)
 
     output = capsys.readouterr().out
@@ -198,9 +221,28 @@ def test_show_upcoming_events_lists_planned(club, topic, event, registrations,
 
 
 def test_show_upcoming_events_without_events(capsys):
-    show_upcoming_events({}, {}, {}, {})
+    show_upcoming_events([], [], [], [])
 
     assert "Предстоящих мероприятий нет." in capsys.readouterr().out
+
+
+def test_show_objects_prints_polymorphic_lines(event, topic,
+                                               registrations_of_event,
+                                               capsys):
+    show_objects(event, topic, registrations_of_event)
+
+    output = capsys.readouterr().out
+
+    assert "Строковое представление объектов" in output
+    assert "Тема" in output
+    assert "Регистрация" in output
+    assert "уровень темы" in output
+
+
+def test_show_objects_without_data(capsys):
+    show_objects([], [], [])
+
+    assert "Строковое представление объектов" in capsys.readouterr().out
 
 
 def test_input_event_id_returns_identifier(event, answers):
@@ -271,12 +313,13 @@ def test_find_and_show_topic_without_result(topics, answers, capsys):
     assert "не найдены" in capsys.readouterr().out
 
 
-def test_register_participant_adds_record(event, club, topic, registrations,
-                                          answers):
+def test_register_participant_adds_object(event, club, topic,
+                                          registrations, answers):
     answers(["1", "Мария К.", "19", "средний", "да"])
 
     assert register_participant(event, club, topic, registrations) is True
     assert len(registrations) == 1
+    assert isinstance(registrations[0], Registration)
 
 
 def test_register_participant_returns_false_when_cancelled(event, club, topic,
@@ -289,14 +332,14 @@ def test_register_participant_returns_false_when_cancelled(event, club, topic,
 
 
 def test_cancel_registration_by_name(registrations, answers, capsys):
-    record = create_registration(
+    registration = create_registration(
         registrations, 1, "Мария К.", 19, "средний", True,
         STATUS_CONFIRMED,
     )
-    answers(["мария", str(record["id"])])
+    answers(["мария", str(registration.id)])
 
     assert cancel_registration_by_name(registrations) is True
-    assert registrations[0]["status"] != STATUS_CONFIRMED
+    assert registrations[0].status != STATUS_CONFIRMED
 
 
 def test_cancel_registration_by_name_without_records(registrations, answers,
@@ -308,19 +351,20 @@ def test_cancel_registration_by_name_without_records(registrations, answers,
 
 
 def test_confirm_registration_by_id(registrations, answers):
-    record = create_registration(registrations, 1, "Мария К.", 19, "средний",
-                                 True)
-    answers([str(record["id"])])
+    registration = create_registration(registrations, 1, "Мария К.", 19,
+                                       "средний", True)
+    answers([str(registration.id)])
 
     assert confirm_registration_by_id(registrations) is True
-    assert registrations[0]["status"] == STATUS_CONFIRMED
+    assert registrations[0].status == STATUS_CONFIRMED
 
 
-def test_confirm_registration_by_id_rejects_confirmed(registrations, answers):
-    record = create_registration(
+def test_confirm_registration_by_id_rejects_confirmed(registrations,
+                                                      answers):
+    registration = create_registration(
         registrations, 1, "Мария К.", 19, "средний", True, STATUS_CONFIRMED
     )
-    answers([str(record["id"])])
+    answers([str(registration.id)])
 
     assert confirm_registration_by_id(registrations) is False
 
@@ -328,43 +372,46 @@ def test_confirm_registration_by_id_rejects_confirmed(registrations, answers):
 def test_add_club_from_input(clubs, answers):
     answers(["Новый клуб", "Описание", "Модератор"])
 
-    add_club_from_input(clubs)
+    club = add_club_from_input(clubs)
 
     assert len(clubs) == 1
-    assert clubs[1]["name"] == "Новый клуб"
+    assert clubs[0].name == "Новый клуб"
+    assert isinstance(club, Club)
 
 
 def test_add_topic_from_input(topics, answers):
     answers(["Новая тема", "средний", "этика, логика", "Материалы"])
 
-    add_topic_from_input(topics)
+    topic = add_topic_from_input(topics)
 
-    assert topics[1]["tags"] == ["этика", "логика"]
+    assert list(topics[0].tags) == ["этика", "логика"]
+    assert isinstance(topic, Topic)
 
 
 def test_add_event_from_input(events, club, topic, answers):
     answers(["1", "1", "15.10.2026", "18:30", "онлайн", "ссылка", "30",
              "16", "средний"])
 
-    add_event_from_input(events, club, topic)
+    event = add_event_from_input(events, club, topic)
 
-    assert events[1]["capacity"] == 30
-    assert events[1]["event_date"] == datetime.date(2026, 10, 15)
-    assert events[1]["club_id"] == 1
+    assert events[0].capacity == 30
+    assert events[0].event_date == datetime.date(2026, 10, 15)
+    assert events[0].club_id == 1
+    assert event.club is club[0]
 
 
 def test_add_event_from_input_without_clubs(events, topic, answers, capsys):
-    add_event_from_input(events, {}, topic)
+    add_event_from_input(events, [], topic)
 
     assert "Сначала добавьте" in capsys.readouterr().out
-    assert events == {}
+    assert events == []
 
 
 def test_add_event_from_input_without_topics(events, club, answers, capsys):
-    add_event_from_input(events, club, {})
+    add_event_from_input(events, club, [])
 
     assert "Сначала добавьте" in capsys.readouterr().out
-    assert events == {}
+    assert events == []
 
 
 def test_add_event_from_input_checks_unknown_club(events, club, topic,
@@ -374,7 +421,7 @@ def test_add_event_from_input_checks_unknown_club(events, club, topic,
     add_event_from_input(events, club, topic)
 
     assert "не найден" in capsys.readouterr().out
-    assert events == {}
+    assert events == []
 
 
 def test_add_event_from_input_checks_capacity(events, club, topic, answers,
@@ -385,13 +432,13 @@ def test_add_event_from_input_checks_capacity(events, club, topic, answers,
     add_event_from_input(events, club, topic)
 
     assert "положительным" in capsys.readouterr().out
-    assert events == {}
+    assert events == []
 
 
 def test_run_menu_reads_only_options(data_dir, answers, capsys):
     seed_project()
 
-    answers(["1", "4", "9", "10", "0"])
+    answers(["1", "4", "9", "10", "11", "0"])
 
     run_menu()
 
@@ -404,11 +451,11 @@ def test_run_menu_reads_only_options(data_dir, answers, capsys):
 def test_run_menu_saves_changes(data_dir, answers):
     seed_project()
 
-    answers(["11", "Новый клуб", "Описание", "Модератор", "0"])
+    answers(["12", "Новый клуб", "Описание", "Модератор", "0"])
 
     run_menu()
 
-    assert storage.load_clubs()[2]["name"] == "Новый клуб"
+    assert storage.load_clubs()[1].name == "Новый клуб"
 
 
 def test_run_menu_reports_unknown_option(data_dir, answers, capsys):
@@ -429,7 +476,7 @@ def test_run_demo_repeats_scenario(data_dir, capsys):
     output = capsys.readouterr().out
 
     assert "подтверждено участников — 24 из 25" in output
-    assert len(storage.load_registrations()) == 25
+    assert len(storage.load_registrations(storage.load_events())) == 25
 
 
 def test_run_demo_reports_missing_event(data_dir, capsys):
@@ -448,6 +495,16 @@ def test_run_introspection_prints_functions(capsys):
     assert "Интроспекция модулей проекта" in output
     assert "get_registration_result" in output
     assert "load_project" in output
+
+
+def test_run_introspection_prints_classes(capsys):
+    run_introspection()
+
+    output = capsys.readouterr().out
+
+    assert "Интроспекция классов предметной области" in output
+    assert "Класс Registration" in output
+    assert "базовый класс: BaseEntity" in output
 
 
 def test_run_mode_dispatches_by_number(monkeypatch):
@@ -498,31 +555,53 @@ def test_project_modules_are_real_modules():
     )
 
 
+def test_project_models_are_classes():
+    assert main.PROJECT_MODELS == (Club, Topic, Event, Registration)
+
+
 def test_menu_items_end_with_exit():
     assert main.MENU_ITEMS[-1] == "0. Выход"
 
 
+def test_menu_contains_objects_item():
+    assert any("объекты" in item for item in main.MENU_ITEMS)
+
+
+def test_main_module_has_no_domain_dictionaries():
+    """В main.py не должно быть коллекций словарей предметной области."""
+    import inspect
+
+    source = inspect.getsource(main)
+
+    assert 'dict[int, dict]' not in source
+    assert 'list[dict]' not in source
+
+
 def seed_project(with_registrations=True, with_event=True):
     """Записать начальные данные проекта во временный каталог."""
-    clubs_data: dict[int, dict] = {}
-    topics_data: dict[int, dict] = {}
-    events_data: dict[int, dict] = {}
-    registrations_data: list[dict] = []
+    clubs_data: list = []
+    topics_data: list = []
+    events_data: list = []
+    registrations_data: list = []
 
     add_club(clubs_data, "Философский клуб", "Описание клуба", "Модератор")
     add_topic(topics_data, "Справедливость", "средний", ["этика"],
               "Материалы")
     if with_event:
-        add_event(
+        event = add_event(
             events_data, 1, 1, datetime.date(2026, 10, 15), "18:30",
             "онлайн", "ссылка на комнату", 25, 16, "средний",
         )
+        event.link(club=clubs_data[0], topic=topics_data[0])
     if with_registrations:
         for number in range(23):
-            create_registration(
-                registrations_data, DEMO_EVENT_ID, f"Участник {number}", 19,
-                "средний", True, STATUS_CONFIRMED,
+            registration = create_registration(
+                registrations_data, DEMO_EVENT_ID,
+                f"Участник {number}", 19, "средний", True,
+                STATUS_CONFIRMED,
             )
+            if with_event:
+                registration.link(events_data[0])
 
     storage.init_project(
         clubs_data, topics_data, events_data, registrations_data
@@ -533,3 +612,15 @@ def seed_project(with_registrations=True, with_event=True):
                                     registrations, storage, topics])
 def test_modules_have_docstrings(module):
     assert module.__doc__
+
+
+@pytest.mark.parametrize("module", [models.base, models.club, models.topic,
+                                    models.event, models.registration])
+def test_model_modules_have_docstrings(module):
+    assert module.__doc__
+
+
+@pytest.mark.parametrize("model", [Club, Topic, Event, Registration])
+def test_models_have_docstrings(model):
+    assert model.__doc__
+    assert model.__init__.__doc__

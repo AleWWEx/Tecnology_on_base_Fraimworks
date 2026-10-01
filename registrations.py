@@ -1,28 +1,32 @@
 """Работа с регистрациями участников на мероприятия.
 
-Регистрации хранятся в списке registrations: каждая запись — словарь с
-идентификатором, мероприятием, данными участника и статусом заявки.
+Регистрации представлены объектами класса models.registration.
+Registration, коллекция регистраций — это список объектов
+List[Registration].
 
 Модуль содержит логику начального сценария ПР1 (check_requirements,
 get_registration_result, generate_ticket_code), переработанную для
-работы с коллекциями: требования мероприятия берутся из данных
-мероприятия, а не из констант модуля.
+работы с коллекциями: требования мероприятия берутся из объекта
+Event, а не из констант модуля.
+
+Распределение ответственности:
+
+- изменение состояния заявки выполняют методы объекта confirm()
+  и cancel();
+- функции модуля ищут заявки в коллекции и создают новые объекты.
 """
 
 import datetime
-from random import randint
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from events import (
-    STATUS_CANCELLED,
-    STATUS_CONFIRMED,
     STATUS_FINISHED,
     STATUS_PENDING,
     count_active_registrations,
     get_event,
-    get_event_status,
-    get_free_places,
 )
+from models import Event, Registration, check_event_requirements
+from utils import next_id
 
 RESULT_APPROVED = "подтверждена"
 RESULT_WAITING = "лист ожидания"
@@ -31,30 +35,47 @@ RESULT_REJECTED = "отказано"
 MIN_PRIORITY_AGE = 18
 PRIORITY_FREE_PLACES = 3
 
+__all__ = [
+    "RESULT_APPROVED",
+    "RESULT_REJECTED",
+    "RESULT_WAITING",
+    "cancel_registration",
+    "check_requirements",
+    "confirm_registration",
+    "create_registration",
+    "filter_registrations_by_status",
+    "find_registrations_by_name",
+    "generate_ticket_code",
+    "get_availability_text",
+    "get_registration_card",
+    "get_registration_result",
+    "is_event_available",
+    "next_registration_id",
+]
+
 
 def check_requirements(age: int, level: str, has_read_materials: bool,
                        min_age: int, required_level: str) -> str:
     """Проверить требования мероприятия.
 
     Возвращает текст первой невыполненной причины. Если все требования
-    выполнены, возвращается пустая строка.
+    выполнены, возвращается пустая строка. Функция ПР1 сохранена: у
+    объекта мероприятия есть одноимённый метод Event.check_requirements,
+    который использует данные конкретного мероприятия.
     """
-    if age < min_age:
-        return f"возраст {age} лет меньше допустимых {min_age}"
-    if not has_read_materials:
-        return "рекомендованные материалы не прочитаны"
-    if level != required_level:
-        return f"уровень «{level}» не подходит, нужен «{required_level}»"
-    return ""
+    return check_event_requirements(
+        age, level, has_read_materials, min_age, required_level
+    )
 
 
 def get_registration_result(age: int, level: str, has_read_materials: bool,
                             event_status: str, free_places: int,
                             min_age: int,
-                            required_level: str) -> tuple[str, str]:
+                            required_level: str) -> Tuple[str, str]:
     """Принять решение по заявке участника.
 
     Возвращает пару: результат обработки заявки и его пояснение.
+    Функция сценария ПР1 сохранена без изменений по назначению.
     """
     if event_status == STATUS_FINISHED:
         return RESULT_REJECTED, "мероприятие уже завершено"
@@ -77,8 +98,13 @@ def get_registration_result(age: int, level: str, has_read_materials: bool,
 
 
 def generate_ticket_code() -> str:
-    """Создать код участия, например DC-4821."""
-    return f"DC-{randint(1000, 9999):04d}"
+    """Создать код участия, например DC-4821.
+
+    Функция ПР1 сохранена. Тот же код создаёт статический метод
+    Registration.generate_ticket_code(), который вызывается
+    конструктором заявки.
+    """
+    return Registration.generate_ticket_code()
 
 
 def get_availability_text(is_available: bool) -> str:
@@ -92,113 +118,129 @@ def get_availability_text(is_available: bool) -> str:
     return "Мероприятие недоступно для записи"
 
 
-def is_event_available(events: dict[int, dict], registrations: list[dict],
+def is_event_available(events: List[Event],
+                       registrations: List[Registration],
                        event_id: int,
                        today: Optional[datetime.date] = None) -> bool:
     """Проверить, доступно ли мероприятие для новой регистрации.
 
     Мероприятие доступно, если оно ещё не завершено и на нём остались
-    свободные места.
+    свободные места. Проверку выполняет метод Event.is_available():
+    функция модуля лишь находит объект мероприятия и передаёт ему
+    число занятых мест.
     """
     event = get_event(events, event_id)
     if event is None:
         return False
-    status = get_event_status(event["event_date"], today)
-    if status == STATUS_FINISHED:
-        return False
     signed_up = count_active_registrations(registrations, event_id)
-    return get_free_places(signed_up, int(event["capacity"])) > 0
+    return event.is_available(signed_up, today)
 
 
-def create_registration(registrations: list[dict], event_id: int,
+def create_registration(registrations: List[Registration], event_id: int,
                         name: str, age: int, level: str,
                         has_read_materials: bool,
-                        status: str = STATUS_PENDING) -> dict:
-    """Добавить запись о регистрации в список registrations.
+                        status: str = STATUS_PENDING) -> Registration:
+    """Создать объект регистрации и добавить его в коллекцию.
 
     Новая заявка получает код участия и указанный статус: подтверждённую
     заявку сразу подтверждают, ожидающую помещают в лист ожидания.
-    Возвращает созданную запись.
+    Возвращает созданный объект Registration.
     """
-    record = {
-        "id": next_registration_id(registrations),
-        "event_id": event_id,
-        "name": name,
-        "age": age,
-        "level": level,
-        "has_read_materials": has_read_materials,
-        "status": status,
-        "ticket_code": generate_ticket_code(),
-    }
-    registrations.append(record)
-    return record
+    registration = Registration(
+        registration_id=next_registration_id(registrations),
+        event_id=event_id,
+        name=name,
+        age=age,
+        level=level,
+        has_read_materials=has_read_materials,
+        status=status,
+    )
+    registrations.append(registration)
+    return registration
 
 
-def next_registration_id(registrations: list[dict]) -> int:
+def next_registration_id(registrations: List[Registration]) -> int:
     """Вычислить идентификатор для новой регистрации."""
-    identifiers = [int(record["id"]) for record in registrations]
-    return max(identifiers, default=0) + 1
+    return next_id(item.id for item in registrations)
 
 
-def cancel_registration(registrations: list[dict],
+def cancel_registration(registrations: List[Registration],
                         registration_id: int) -> bool:
     """Отменить регистрацию по её идентификатору.
 
-    Возвращает True, если запись найдена и отменена. Повторная отмена
-    уже отменённой регистрации ничего не меняет и тоже возвращает True.
+    Состояние объекта меняет метод Registration.cancel(), сама
+    функция только находит заявку в коллекции. Возвращает True,
+    если запись найдена и отменена. Повторная отмена уже отменённой
+    регистрации ничего не меняет и тоже возвращает True.
     """
-    for record in registrations:
-        if record["id"] == registration_id:
-            record["status"] = STATUS_CANCELLED
-            return True
-    return False
+    registration = get_registration(registrations, registration_id)
+    if registration is None:
+        return False
+    registration.cancel()
+    return True
 
 
-def confirm_registration(registrations: list[dict],
+def confirm_registration(registrations: List[Registration],
                          registration_id: int) -> bool:
     """Подтвердить заявку, ожидающую подтверждения.
 
-    Заявка со статусом «присутствовал» и отменённая заявка не
-    подтверждаются: возвращается False.
+    Состояние объекта меняет метод Registration.confirm(). Заявка со
+    статусом «присутствовал» и отменённая заявка не подтверждаются:
+    возвращается False.
     """
-    for record in registrations:
-        if record["id"] != registration_id:
-            continue
-        if record["status"] != STATUS_PENDING:
-            return False
-        record["status"] = STATUS_CONFIRMED
-        return True
-    return False
+    registration = get_registration(registrations, registration_id)
+    if registration is None or not registration.is_waiting():
+        return False
+    registration.confirm()
+    return True
 
 
-def find_registrations_by_name(registrations: list[dict],
-                               name: str) -> list[int]:
+def get_registration(registrations: List[Registration],
+                     registration_id: int) -> Optional[Registration]:
+    """Вернуть объект регистрации по идентификатору или None."""
+    for registration in registrations:
+        if registration.id == registration_id:
+            return registration
+    return None
+
+
+def find_registrations_by_name(registrations: List[Registration],
+                               name: str) -> List[Registration]:
     """Найти регистрации участника по подстроке имени.
 
     Сравнение выполняется без учёта регистра.
     """
-    needle = name.strip().lower()
+    needle = str(name).strip().lower()
     return [
-        record["id"]
-        for record in registrations
-        if needle in str(record["name"]).lower()
+        registration
+        for registration in registrations
+        if needle in registration.name.lower()
     ]
 
 
-def filter_registrations_by_status(registrations: list[dict],
-                                   status: str) -> list[dict]:
+def filter_registrations_by_status(registrations: List[Registration],
+                                   status: str) -> List[Registration]:
     """Отобрать регистрации с заданным статусом."""
-    return [record for record in registrations if record["status"] == status]
+    return [
+        registration
+        for registration in registrations
+        if registration.status == status
+    ]
 
 
-def get_registration_card(record: dict, event: dict) -> str:
+def get_registration_card(registration: Registration) -> str:
     """Сформировать текстовую карточку регистрации для вывода."""
-    materials = "да" if record["has_read_materials"] else "нет"
-    return (
-        f"Участник: {record['name']}, возраст {record['age']}, "
-        f"уровень «{record['level']}», материалы прочитаны: {materials}\n"
-        f"Мероприятие: {event['event_date'].strftime('%d.%m.%Y')}, "
-        f"{event['start_time']}\n"
-        f"Статус заявки: {record['status']}\n"
-        f"Код участия: {record['ticket_code']}"
-    )
+    return registration.render()
+
+
+def link_registrations(registrations: List[Registration],
+                       events: List[Event]) -> None:
+    """Связать каждую регистрацию с объектом её мероприятия.
+
+    Связь выполняется при загрузке данных: объект регистрации получает
+    ссылку на объект мероприятия, а в JSON-файле по-прежнему хранится
+    только идентификатор event_id.
+    """
+    for registration in registrations:
+        event = get_event(events, registration.event_id)
+        registration.link(event)

@@ -3,14 +3,47 @@
 Модуль собирает то, что используется в разных частях приложения:
 безопасный ввод данных пользователя с обработкой исключений, функции
 работы с датами и генерация следующего идентификатора записи.
+
+Функции модуля остаются обычными функциями и на ПР3: ввод с клавиатуры
+не относится к данным конкретного объекта, поэтому переносить его в
+метод класса Club или Event было бы неверно.
 """
 
 import datetime
-from typing import Sequence
+from functools import wraps
+from typing import Callable, Iterable, List, Sequence
 
 DATE_FORMAT = "%d.%m.%Y"
 DATE_FORMAT_HINT = "ДД.ММ.ГГГГ"
 STORAGE_DATE_FORMAT = "%Y-%m-%d"
+
+#: Журнал вызовов функций, помеченных декоратором logged.
+CALL_LOG: List[str] = []
+
+
+def logged(func: Callable) -> Callable:
+    """Записывать имя функции в журнал перед её вызовом.
+
+    Декоратор не меняет результат функции: он только запоминает
+    вызов. functools.wraps сохраняет имя и документацию функции,
+    поэтому интроспекция модуля продолжает работать.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        CALL_LOG.append(func.__name__)
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def get_call_log() -> List[str]:
+    """Вернуть список имён вызванных функций журнала."""
+    return list(CALL_LOG)
+
+
+def clear_call_log() -> None:
+    """Очистить журнал вызовов."""
+    CALL_LOG.clear()
 
 
 def input_text(prompt: str) -> str:
@@ -84,7 +117,8 @@ def parse_user_date(value: str) -> datetime.date:
 def parse_date(value: str) -> datetime.date:
     """Преобразовать строку формата ГГГГ-ММ-ДД в объект date.
 
-    Такой формат используется при чтении дат из JSON-файлов проекта.
+    Такой формат используется при чтении дат из JSON-файлов проекта
+    и при сохранении объектов Event обратно в файл.
     """
     return datetime.datetime.strptime(value, STORAGE_DATE_FORMAT).date()
 
@@ -94,10 +128,11 @@ def format_date(value: datetime.date) -> str:
     return value.strftime(DATE_FORMAT)
 
 
-def next_id(items: dict) -> int:
-    """Вычислить идентификатор для новой записи словаря.
+def next_id(identifiers: Iterable[int]) -> int:
+    """Вычислить идентификатор для новой записи коллекции.
 
-    Идентификаторы выдаются по возрастанию; пустой словарь даёт первый
-    идентификатор 1.
+    Принимается любая коллекция идентификаторов: в ПР2 это были ключи
+    словарей, на ПР3 — атрибуты id объектов. Идентификаторы выдаются
+    по возрастанию; пустая коллекция даёт первый идентификатор 1.
     """
-    return max(items, default=0) + 1
+    return max(identifiers, default=0) + 1

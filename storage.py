@@ -1,19 +1,33 @@
 """Сохранение и загрузка данных проекта в JSON-файлах.
 
+Формат хранения данных не изменился по сравнению с ПР2: файлы
+data/clubs.json, data/topics.json, data/events.json и
+data/registrations.json содержат те же поля. Изменился способ работы:
+
+- при загрузке данные JSON преобразуются в объекты Club, Topic, Event
+  и Registration (метод from_data() каждого класса);
+- при сохранении объекты преобразуются в данные методом to_dict().
+
+Объектные ссылки (Registration.event, Event.club, Event.topic) в файлы
+не записываются: JSON хранит только идентификаторы event_id, club_id
+и topic_id. После загрузки связи восстанавливаются функцией
+bind_references().
+
 Данные хранятся в каталоге data рядом с программными модулями. Файлы
 создаются при первом запуске программы, поэтому приложение можно
-запустить в чистом репозитории.
-
-Чтение и запись выполняются через контекстный менеджер with: файл
-закрывается даже при возникновении ошибки. Ошибки доступа к файлу
-перехватываются и не приводят к аварийному завершению программы.
+запустить в чистом репозитории. Чтение и запись выполняются через
+контекстный менеджер with: файл закрывается даже при возникновении
+ошибки. Ошибки доступа к файлу перехватываются и не приводят к
+аварийному завершению программы.
 """
 
-import datetime
 import json
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
-from utils import STORAGE_DATE_FORMAT
+from models import Club, Event, Registration, Topic
+from registrations import link_registrations
+from utils import logged, parse_date
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 
@@ -23,7 +37,8 @@ EVENTS_FILE = "events.json"
 REGISTRATIONS_FILE = "registrations.json"
 
 
-def load_json(file_path: Path) -> list[dict]:
+@logged
+def load_json(file_path: Path) -> List[Dict[str, Any]]:
     """Прочитать список записей из JSON-файла.
 
     Возвращает пустой список, если файл отсутствует, его содержимое не
@@ -56,7 +71,8 @@ def load_json(file_path: Path) -> list[dict]:
     return [record for record in data if isinstance(record, dict)]
 
 
-def save_json(file_path: Path, records: list[dict]) -> bool:
+@logged
+def save_json(file_path: Path, records: List[Dict[str, Any]]) -> bool:
     """Записать список записей в JSON-файл.
 
     Возвращает True, если данные сохранены, и False, если запись не
@@ -72,114 +88,136 @@ def save_json(file_path: Path, records: list[dict]) -> bool:
     return True
 
 
-def records_to_dict(records: list[dict]) -> dict[int, dict]:
-    """Преобразовать список записей в словарь по идентификатору.
+def objects_to_records(objects: List[Any]) -> List[Dict[str, Any]]:
+    """Преобразовать коллекцию объектов в список словарей.
 
-    Записи без идентификатора пропускаются: без него запись нельзя
-    адресовать в словаре.
+    Преобразование выполняется вызовом метода to_dict() каждого объекта:
+    объекты не должны храниться в JSON-файле как есть.
     """
-    items: dict[int, dict] = {}
+    return [item.to_dict() for item in objects]
+
+
+def records_to_ids(records: List[Dict[str, Any]]) -> List[int]:
+    """Получить идентификаторы записей, пропуская записи без них."""
+    identifiers = []
     for record in records:
-        if "id" not in record:
-            continue
-        items[int(record["id"])] = record
-    return items
+        if "id" in record:
+            identifiers.append(int(record["id"]))
+    return identifiers
 
 
-def dict_to_records(items: dict[int, dict]) -> list[dict]:
-    """Преобразовать словарь записей в список для сохранения."""
-    return list(items.values())
+def load_clubs() -> List[Club]:
+    """Загрузить клубы из файла data/clubs.json как объекты Club."""
+    clubs = []
+    for record in load_json(DATA_DIR / CLUBS_FILE):
+        try:
+            clubs.append(Club.from_data(record))
+        except (TypeError, ValueError) as error:
+            print(f"Пропущен клуб с неверными данными: {error}")
+    return clubs
 
 
-def prepare_event(record: dict) -> dict:
-    """Привести запись мероприятия к виду, удобному для работы.
-
-    Дата преобразуется из строки в объект date: сравнение дат в
-    модуле events.py выполняется над объектами.
-    """
-    prepared = dict(record)
-    if "event_date" in prepared:
-        prepared["event_date"] = datetime.datetime.strptime(
-            str(prepared["event_date"]), STORAGE_DATE_FORMAT
-        ).date()
-    return prepared
+def save_clubs(clubs: List[Club]) -> bool:
+    """Сохранить коллекцию клубов в файл data/clubs.json."""
+    return save_json(DATA_DIR / CLUBS_FILE, objects_to_records(clubs))
 
 
-def load_clubs() -> dict[int, dict]:
-    """Загрузить клубы из файла data/clubs.json."""
-    return records_to_dict(load_json(DATA_DIR / CLUBS_FILE))
+def load_topics() -> List[Topic]:
+    """Загрузить темы из файла data/topics.json как объекты Topic."""
+    topics = []
+    for record in load_json(DATA_DIR / TOPICS_FILE):
+        try:
+            topics.append(Topic.from_data(record))
+        except (TypeError, ValueError) as error:
+            print(f"Пропущена тема с неверными данными: {error}")
+    return topics
 
 
-def save_clubs(clubs: dict[int, dict]) -> bool:
-    """Сохранить клубы в файл data/clubs.json."""
-    return save_json(DATA_DIR / CLUBS_FILE, dict_to_records(clubs))
+def save_topics(topics: List[Topic]) -> bool:
+    """Сохранить коллекцию тем в файл data/topics.json."""
+    return save_json(DATA_DIR / TOPICS_FILE, objects_to_records(topics))
 
 
-def load_topics() -> dict[int, dict]:
-    """Загрузить темы дискуссий из файла data/topics.json."""
-    return records_to_dict(load_json(DATA_DIR / TOPICS_FILE))
-
-
-def save_topics(topics: dict[int, dict]) -> bool:
-    """Сохранить темы дискуссий в файл data/topics.json."""
-    return save_json(DATA_DIR / TOPICS_FILE, dict_to_records(topics))
-
-
-def load_events() -> dict[int, dict]:
+def load_events() -> List[Event]:
     """Загрузить мероприятия из файла data/events.json.
 
-    Записи, у которых дата записана неверно, пропускаются: одно
-    повреждённое значение не должно мешать загрузке остальных данных.
+    Объекты создаются методом Event.from_data(): дата из строки
+    преобразуется в объект date. Записи с неверной датой пропускаются:
+    одно повреждённое значение не должно мешать загрузке остальных
+    данных.
     """
-    records = load_json(DATA_DIR / EVENTS_FILE)
-    events: dict[int, dict] = {}
-    for record in records:
+    events = []
+    for record in load_json(DATA_DIR / EVENTS_FILE):
         try:
-            prepared = prepare_event(record)
-        except (ValueError, TypeError):
-            print(f"Пропущено мероприятие с неверной датой: {record}")
-            continue
-        events[int(prepared["id"])] = prepared
+            events.append(Event.from_data(record, parse_date=parse_date))
+        except (TypeError, ValueError) as error:
+            print(f"Пропущено мероприятие с неверной датой: {error}")
     return events
 
 
-def save_events(events: dict[int, dict]) -> bool:
-    """Сохранить мероприятия в файл data/events.json."""
-    records = []
-    for record in events.values():
-        item = dict(record)
-        item["event_date"] = item["event_date"].strftime(STORAGE_DATE_FORMAT)
-        records.append(item)
-    return save_json(DATA_DIR / EVENTS_FILE, records)
+def save_events(events: List[Event]) -> bool:
+    """Сохранить коллекцию мероприятий в файл data/events.json."""
+    return save_json(DATA_DIR / EVENTS_FILE, objects_to_records(events))
 
 
-def load_registrations() -> list[dict]:
-    """Загрузить регистрации из файла data/registrations.json."""
-    return load_json(DATA_DIR / REGISTRATIONS_FILE)
+def load_registrations(events: List[Event]) -> List[Registration]:
+    """Загрузить регистрации из файла data/registrations.json.
 
-
-def save_registrations(registrations: list[dict]) -> bool:
-    """Сохранить регистрации в файл data/registrations.json."""
-    return save_json(DATA_DIR / REGISTRATIONS_FILE, registrations)
-
-
-def load_project() -> tuple[dict[int, dict], dict[int, dict],
-                            dict[int, dict], list[dict]]:
-    """Загрузить все коллекции проекта одной командой.
-
-    Возвращает кортеж: клубы, темы, мероприятия, регистрации.
+    Связь с мероприятиями восстанавливается после создания объектов:
+    каждый объект Registration получает ссылку на объект Event.
     """
-    return (
-        load_clubs(),
-        load_topics(),
-        load_events(),
-        load_registrations(),
+    registrations = []
+    for record in load_json(DATA_DIR / REGISTRATIONS_FILE):
+        try:
+            registrations.append(Registration.from_data(record))
+        except (TypeError, ValueError) as error:
+            print(f"Пропущена регистрация с неверными данными: {error}")
+    link_registrations(registrations, events)
+    return registrations
+
+
+def save_registrations(registrations: List[Registration]) -> bool:
+    """Сохранить коллекцию регистраций в registrations.json."""
+    return save_json(
+        DATA_DIR / REGISTRATIONS_FILE, objects_to_records(registrations)
     )
 
 
-def save_project(clubs: dict[int, dict], topics: dict[int, dict],
-                 events: dict[int, dict],
-                 registrations: list[dict]) -> bool:
+def bind_references(clubs: List[Club], topics: List[Topic],
+                    events: List[Event],
+                    registrations: List[Registration]) -> None:
+    """Связать объекты предметной области друг с другом.
+
+    Мероприятие получает ссылки на свой клуб и тему, регистрация — на
+    своё мероприятие. В коллекциях остаются те же объекты: копий не
+    создаётся, поэтому изменение объекта видно всем его пользователям.
+    """
+    clubs_by_id = {club.id: club for club in clubs}
+    topics_by_id = {topic.id: topic for topic in topics}
+    for event in events:
+        event.link(club=clubs_by_id.get(event.club_id),
+                   topic=topics_by_id.get(event.topic_id))
+    link_registrations(registrations, events)
+
+
+def load_project() -> Tuple[List[Club], List[Topic], List[Event],
+                            List[Registration]]:
+    """Загрузить все коллекции проекта одной командой.
+
+    Возвращает кортеж: клубы, темы, мероприятия, регистрации — все
+    уже готовые объекты со связями между собой.
+    """
+    clubs = load_clubs()
+    topics = load_topics()
+    events = load_events()
+    registrations = load_registrations(events)
+    bind_references(clubs, topics, events, registrations)
+    return clubs, topics, events, registrations
+
+
+def save_project(clubs: List[Club], topics: List[Topic],
+                 events: List[Event],
+                 registrations: List[Registration]) -> bool:
     """Сохранить все коллекции проекта одной командой.
 
     Возвращает True, если все файлы записаны успешно.
@@ -193,9 +231,9 @@ def save_project(clubs: dict[int, dict], topics: dict[int, dict],
     return all(results)
 
 
-def init_project(clubs: dict[int, dict], topics: dict[int, dict],
-                 events: dict[int, dict],
-                 registrations: list[dict]) -> None:
+def init_project(clubs: List[Club], topics: List[Topic],
+                 events: List[Event],
+                 registrations: List[Registration]) -> None:
     """Создать каталог data и записать в него начальные данные.
 
     Функция вызывается при первом запуске программы, когда файлы

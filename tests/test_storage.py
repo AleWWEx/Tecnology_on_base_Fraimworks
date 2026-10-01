@@ -1,9 +1,14 @@
-"""Тесты функций работы с хранилищем данных."""
+"""Тесты функций работы с хранилищем данных.
+
+Проверяется преобразование данных JSON в объекты и объектов обратно
+в данные, а также восстановление связей между объектами.
+"""
 
 import datetime
 import json
 
 import storage
+from models import Club, Event, Registration, Topic
 
 
 def test_load_json_returns_empty_list_when_file_missing(tmp_path):
@@ -60,44 +65,140 @@ def test_save_json_returns_false_on_os_error(tmp_path, monkeypatch):
     assert storage.save_json(path, []) is False
 
 
-def test_records_to_dict_builds_dict_by_id():
-    records = [
-        {"id": 1, "name": "Первый"},
-        {"id": 5, "name": "Пятый"},
-        {"value": 0},
-    ]
+def test_objects_to_records_uses_to_dict():
+    objects = [make_club(), make_topic()]
 
-    result = storage.records_to_dict(records)
+    records = storage.objects_to_records(objects)
 
-    assert result == {
-        1: {"id": 1, "name": "Первый"},
-        5: {"id": 5, "name": "Пятый"},
-    }
+    assert records[0]["name"] == "Клуб"
+    assert records[1]["title"] == "Тема"
 
 
-def test_dict_to_records_returns_list():
-    items = {1: {"id": 1, "name": "Тест"}}
+def test_records_to_ids_skips_records_without_id():
+    records = [{"id": 1}, {"value": 0}, {"id": 5}]
 
-    assert storage.dict_to_records(items) == [{"id": 1, "name": "Тест"}]
-
-
-def test_prepare_event_converts_date():
-    prepared = storage.prepare_event({"id": 1, "event_date": "2026-10-15"})
-
-    assert prepared["event_date"] == datetime.date(2026, 10, 15)
+    assert storage.records_to_ids(records) == [1, 5]
 
 
-def test_prepare_event_keeps_other_fields():
-    prepared = storage.prepare_event({"id": 1, "capacity": 25})
+def test_save_and_load_clubs(data_dir):
+    clubs = [make_club()]
 
-    assert prepared["capacity"] == 25
+    storage.save_clubs(clubs)
+    loaded = storage.load_clubs()
+
+    assert isinstance(loaded[0], Club)
+    assert loaded[0].name == "Клуб"
+    assert loaded[0].moderator == "Модератор"
 
 
-def test_load_project_after_save_project(tmp_path, monkeypatch):
-    monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
-    clubs = {1: make_club()}
-    topics = {1: make_topic()}
-    events = {1: make_event()}
+def test_save_and_load_topics(data_dir):
+    storage.save_topics([make_topic()])
+
+    loaded = storage.load_topics()
+
+    assert isinstance(loaded[0], Topic)
+    assert list(loaded[0].tags) == ["этика"]
+
+
+def test_save_events_converts_date_to_string(data_dir):
+    storage.save_events([make_event()])
+    saved = json.loads(
+        (data_dir / storage.EVENTS_FILE).read_text(encoding="utf-8")
+    )
+
+    assert saved[0]["event_date"] == "2026-10-15"
+
+
+def test_load_events_returns_objects_with_dates(data_dir):
+    storage.save_events([make_event()])
+
+    loaded = storage.load_events()
+
+    assert isinstance(loaded[0], Event)
+    assert loaded[0].event_date == datetime.date(2026, 10, 15)
+
+
+def test_load_events_skips_record_with_bad_date(data_dir):
+    path = data_dir / storage.EVENTS_FILE
+    path.write_text(
+        '[{"id": 1, "event_date": "не дата"},'
+        ' {"id": 2, "event_date": "2026-10-15"}]\n',
+        encoding="utf-8",
+    )
+
+    events = storage.load_events()
+
+    assert [item.id for item in events] == [2]
+
+
+def test_save_and_load_registrations(data_dir):
+    storage.save_events([make_event()])
+    storage.save_registrations([make_registration()])
+
+    loaded = storage.load_registrations(storage.load_events())
+
+    assert isinstance(loaded[0], Registration)
+    assert loaded[0].name == "Мария К."
+    assert loaded[0].ticket_code == "DC-1001"
+
+
+def test_load_registrations_restores_event_link(data_dir):
+    storage.save_events([make_event()])
+    storage.save_registrations([make_registration()])
+
+    loaded = storage.load_registrations(storage.load_events())
+
+    assert loaded[0].event is not None
+    assert loaded[0].event.id == 1
+
+
+def test_saved_json_has_no_objects(data_dir):
+    storage.save_events([make_event()])
+    storage.save_registrations([make_registration()])
+
+    events_text = (data_dir / storage.EVENTS_FILE).read_text(
+        encoding="utf-8"
+    )
+    regs_text = (data_dir / storage.REGISTRATIONS_FILE).read_text(
+        encoding="utf-8"
+    )
+
+    assert "Event(" not in events_text
+    assert "Registration(" not in regs_text
+    assert "event\":" not in regs_text
+
+
+def test_bind_references_links_objects(data_dir):
+    clubs = [make_club()]
+    topics = [make_topic()]
+    events = [make_event()]
+    registrations = [make_registration()]
+    for event in events:
+        event.link()
+    for registration in registrations:
+        registration.event = None
+
+    storage.bind_references(clubs, topics, events, registrations)
+
+    assert events[0].club is clubs[0]
+    assert events[0].topic is topics[0]
+    assert registrations[0].event is events[0]
+
+
+def test_bind_references_ignores_unknown_links(data_dir):
+    events = [make_event()]
+    events[0].link()
+
+    storage.bind_references([], [], events, [])
+
+    assert events[0].club is None
+    assert events[0].topic is None
+
+
+def test_load_project_after_save_project(data_dir):
+    clubs = [make_club()]
+    topics = [make_topic()]
+    events = [make_event()]
     registrations = [make_registration()]
 
     saved = storage.save_project(clubs, topics, events, registrations)
@@ -108,92 +209,58 @@ def test_load_project_after_save_project(tmp_path, monkeypatch):
     assert saved is True
     assert loaded_clubs == clubs
     assert loaded_topics == topics
-    assert loaded_events[1]["event_date"] == datetime.date(2026, 10, 15)
+    assert loaded_events[0].event_date == datetime.date(2026, 10, 15)
     assert loaded_regs == registrations
 
 
-def test_save_events_converts_date_to_string(tmp_path, monkeypatch):
-    monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
-    events = {1: make_event()}
-
-    storage.save_events(events)
-    saved = json.loads(
-        (tmp_path / storage.EVENTS_FILE).read_text(encoding="utf-8")
+def test_load_project_creates_links(data_dir):
+    storage.save_project(
+        [make_club()], [make_topic()], [make_event()], [make_registration()]
     )
 
-    assert saved[0]["event_date"] == "2026-10-15"
+    _, _, events, registrations = storage.load_project()
 
-
-def test_load_events_skips_record_with_bad_date(tmp_path, monkeypatch):
-    monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
-    path = tmp_path / storage.EVENTS_FILE
-    path.write_text(
-        '[{"id": 1, "event_date": "не дата"},'
-        ' {"id": 2, "event_date": "2026-10-15"}]\n',
-        encoding="utf-8",
-    )
-
-    events = storage.load_events()
-
-    assert list(events) == [2]
+    assert events[0].club is not None
+    assert registrations[0].event is events[0]
 
 
 def test_init_project_creates_data_dir(tmp_path, monkeypatch):
     target = tmp_path / "nested" / "data"
     monkeypatch.setattr(storage, "DATA_DIR", target)
 
-    storage.init_project({}, {}, {}, [])
+    storage.init_project([], [], [], [])
 
     assert target.exists()
     assert (target / storage.CLUBS_FILE).exists()
 
 
+def test_load_functions_log_calls(data_dir):
+    from utils import clear_call_log, get_call_log
+
+    clear_call_log()
+    storage.load_clubs()
+
+    assert get_call_log() == ["load_json"]
+    clear_call_log()
+
+
 def make_club():
-    """Собрать тестовую запись клуба."""
-    return {
-        "id": 1,
-        "name": "Клуб",
-        "description": "Описание",
-        "moderator": "Модератор",
-    }
+    """Создать объект клуба для теста."""
+    return Club(1, "Клуб", "Описание", "Модератор")
 
 
 def make_topic():
-    """Собрать тестовую запись темы дискуссии."""
-    return {
-        "id": 1,
-        "title": "Тема",
-        "level": "средний",
-        "tags": ["этика"],
-        "materials": "Материалы",
-    }
+    """Создать объект темы для теста."""
+    return Topic(1, "Тема", "средний", ["этика"], "Материалы")
 
 
 def make_event():
-    """Собрать тестовую запись мероприятия."""
-    return {
-        "id": 1,
-        "club_id": 1,
-        "topic_id": 1,
-        "event_date": datetime.date(2026, 10, 15),
-        "start_time": "18:30",
-        "format": "онлайн",
-        "place": "ссылка на комнату",
-        "capacity": 25,
-        "min_age": 16,
-        "required_level": "средний",
-    }
+    """Создать объект мероприятия для теста."""
+    return Event(1, 1, 1, datetime.date(2026, 10, 15), "18:30", "онлайн",
+                 "ссылка на комнату", 25, 16, "средний")
 
 
 def make_registration():
-    """Собрать тестовую запись регистрации."""
-    return {
-        "id": 1,
-        "event_id": 1,
-        "name": "Мария К.",
-        "age": 19,
-        "level": "средний",
-        "has_read_materials": True,
-        "status": "подтверждён",
-        "ticket_code": "DC-1001",
-    }
+    """Создать объект регистрации для теста."""
+    return Registration(1, 1, "Мария К.", 19, "средний", True,
+                        "подтверждён", "DC-1001")

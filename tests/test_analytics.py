@@ -4,6 +4,7 @@ import datetime
 
 from analytics import (
     count_topics_by_level,
+    describe_entities,
     format_event_statistics,
     format_topics_by_level,
     get_club_event_counts,
@@ -18,13 +19,28 @@ from events import (
     STATUS_PENDING,
     add_event,
 )
+from models import Registration
 from registrations import create_registration
 from topics import LEVELS, add_topic
 
 
+def make_registration(event_id=1, name="Участник",
+                      status=STATUS_CONFIRMED):
+    """Создать объект регистрации для подсчётов."""
+    return Registration(
+        registration_id=event_id,
+        event_id=event_id,
+        name=name,
+        age=19,
+        level="средний",
+        has_read_materials=True,
+        status=status,
+    )
+
+
 def make_events():
-    """Вернуть словарь из двух мероприятий разных клубов."""
-    events = {}
+    """Вернуть список из двух мероприятий разных клубов."""
+    events = []
     add_event(
         events, 1, 1, datetime.date(2026, 10, 15), "18:30", "онлайн",
         "ссылка", 25, 16, "средний",
@@ -39,11 +55,11 @@ def make_events():
 def test_get_event_statistics_counts_places():
     events = make_events()
     registrations = [
-        {"event_id": 1, "status": STATUS_CONFIRMED},
-        {"event_id": 1, "status": STATUS_CONFIRMED},
-        {"event_id": 1, "status": STATUS_PENDING},
-        {"event_id": 1, "status": STATUS_CANCELLED},
-        {"event_id": 2, "status": STATUS_ATTENDED},
+        make_registration(1, status=STATUS_CONFIRMED),
+        make_registration(1, status=STATUS_CONFIRMED),
+        make_registration(1, status=STATUS_PENDING),
+        make_registration(1, status=STATUS_CANCELLED),
+        make_registration(2, status=STATUS_ATTENDED),
     ]
 
     summary = get_event_statistics(events, registrations)
@@ -72,11 +88,11 @@ def test_get_club_event_counts():
 
 
 def test_get_club_event_counts_ignores_empty():
-    assert get_club_event_counts({}) == {}
+    assert get_club_event_counts([]) == {}
 
 
 def test_count_topics_by_level():
-    topics = {}
+    topics = []
     add_topic(topics, "Первая", "средний", ["этика"], "Материалы")
     add_topic(topics, "Вторая", "средний", ["логика"], "Материалы")
     add_topic(topics, "Третья", "начинающий", ["этика"], "Материалы")
@@ -111,8 +127,8 @@ def test_get_top_participants_ignores_cancelled():
 
 def test_get_top_participants_respects_limit():
     registrations = [
-        {"name": "Участник", "status": STATUS_CONFIRMED},
-        {"name": "Другой", "status": STATUS_CONFIRMED},
+        make_registration(1, name="Участник"),
+        make_registration(2, name="Другой"),
     ]
 
     assert len(get_top_participants(registrations, limit=1)) == 1
@@ -147,7 +163,7 @@ def test_format_event_statistics_skips_unknown_event():
 
     table = format_event_statistics("Заполненность", events, summary)
 
-    assert "99" not in table
+    assert "  99" not in table
 
 
 def test_format_topics_by_level():
@@ -157,3 +173,14 @@ def test_format_topics_by_level():
 
     for level in LEVELS:
         assert level in table
+
+
+def test_describe_entities_uses_polymorphic_str(event, topic,
+                                                registrations_of_event):
+    objects = [event[0], topic[0], registrations_of_event[0]]
+
+    texts = describe_entities(objects)
+
+    assert texts[0].startswith("Мероприятие")
+    assert texts[1].startswith("Тема")
+    assert texts[2].startswith("Регистрация")

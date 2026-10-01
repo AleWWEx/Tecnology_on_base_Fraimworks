@@ -1,13 +1,16 @@
-"""Тесты утилитарных функций."""
+"""Тесты утилитарных функций и декоратора logged."""
 
 import datetime
 
 from utils import (
     DATE_FORMAT_HINT,
+    clear_call_log,
     format_date,
+    get_call_log,
     input_choice,
     input_int,
     input_text,
+    logged,
     next_id,
     parse_date,
     parse_user_date,
@@ -83,13 +86,59 @@ def test_format_date_formats_to_dd_mm_yyyy():
     assert format_date(datetime.date(2026, 10, 15)) == "15.10.2026"
 
 
-def test_next_id_returns_one_for_empty_dict():
-    assert next_id({}) == 1
+def test_next_id_returns_one_for_empty_collection():
+    assert next_id([]) == 1
 
 
 def test_next_id_returns_max_plus_one():
-    assert next_id({1: {}, 5: {}, 3: {}}) == 6
+    assert next_id([1, 5, 3]) == 6
+
+
+def test_next_id_accepts_generator():
+    assert next_id(value for value in [1, 2, 7]) == 8
 
 
 def test_date_format_hint_is_correct():
     assert DATE_FORMAT_HINT == "ДД.ММ.ГГГГ"
+
+
+def test_logged_records_call_name():
+    clear_call_log()
+
+    @logged
+    def sample(value):
+        """Пример функции."""
+        return value * 2
+
+    assert sample(3) == 6
+    assert get_call_log() == ["sample"]
+    clear_call_log()
+
+
+def test_logged_preserves_metadata():
+    @logged
+    def sample(value):
+        """Пример функции."""
+        return value
+
+    assert sample.__name__ == "sample"
+    assert sample.__doc__ == "Пример функции."
+
+
+def test_logged_passes_arguments():
+    @logged
+    def sample(first, second=0):
+        return first + second
+
+    assert sample(1, second=2) == 3
+
+
+def test_clear_call_log_empties_journal():
+    @logged
+    def sample():
+        return None
+
+    sample()
+    clear_call_log()
+
+    assert get_call_log() == []
