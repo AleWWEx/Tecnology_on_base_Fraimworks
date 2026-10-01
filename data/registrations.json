@@ -498,5 +498,25 @@
     "has_read_materials": true,
     "status": "ожидает подтверждения",
     "ticket_code": "DC-2850"
+  },
+  {
+    "id": 51,
+    "event_id": 1,
+    "name": "Мария К.",
+    "age": 19,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "подтверждён",
+    "ticket_code": "DC-2412"
+  },
+  {
+    "id": 52,
+    "event_id": 1,
+    "name": "Ольга П.",
+    "age": 17,
+    "level": "средний",
+    "has_read_materials": true,
+    "status": "ожидает подтверждения",
+    "ticket_code": "DC-9115"
   }
 ]
